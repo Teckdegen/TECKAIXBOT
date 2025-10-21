@@ -10,9 +10,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
+# Set up logging for better debugging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Twitter API credentials (set in .env file)
 required_env_vars = ['BEARER_TOKEN', 'API_KEY', 'API_SECRET', 'ACCESS_TOKEN', 'ACCESS_SECRET', 'GROQ_API_KEY']
 for var in required_env_vars:
     if not os.environ.get(var):
@@ -26,31 +27,32 @@ ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
 ACCESS_SECRET = os.environ.get('ACCESS_SECRET')
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
-
+# Aura API base URL
 AURA_BASE_URL = 'https://aura.adex.network/api/portfolio'
 
-
+# Bot username
 BOT_USERNAME = '@teckaibot'
 
-
+# Regex for Ethereum wallet addresses (0x followed by 40 hex characters)
 WALLET_REGEX = re.compile(r'\b0x[a-fA-F0-9]{40}\b')
 
-
+# Set up Tweepy client with timeout and rate limit handling
 client = tweepy.Client(
     bearer_token=BEARER_TOKEN,
     consumer_key=API_KEY,
     consumer_secret=API_SECRET,
     access_token=ACCESS_TOKEN,
     access_token_secret=ACCESS_SECRET,
-    wait_on_rate_limit=True 
+    wait_on_rate_limit=True  # Automatically wait on rate limits
 )
 
+# Set up Groq client
 if not GROQ_API_KEY:
     logging.error("GROQ_API_KEY not found in environment variables. Please set it.")
     exit(1)
 groq_client = Groq(api_key=GROQ_API_KEY)
 
-
+# Function to generate AI reply using Groq
 def generate_ai_reply(balances, strategies, tweet_text):
     is_advice_question = any(keyword in tweet_text.lower() for keyword in ['increase', 'what can i do', 'advice', 'improve', 'grow', 'how to'])
     
@@ -147,12 +149,11 @@ def post_reply(tweet_id, user_handle, balances, strategies, tweet_text):
     
     try:
         response = client.create_tweet(
-            text=reply_text,
-            in_reply_to_tweet_id=tweet_id
+            text=reply_text
         )
-        logging.info(f"Reply posted successfully: {response.data['id']}")
+        logging.info(f"Post created successfully: {response.data['id']}")
     except Exception as e:
-        logging.error(f"Error posting reply: {e}")
+        logging.error(f"Error creating post: {e}")
 
 def run_bot():
     since_id = None
