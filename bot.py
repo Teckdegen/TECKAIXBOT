@@ -3,21 +3,29 @@ import time
 import requests
 import tweepy
 import logging
+import os
 from datetime import datetime, timedelta
 from groq import Groq
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Set up logging for better debugging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Twitter API credentials (replace with your actual credentials)
-BEARER_TOKEN = 'AAAAAAAAAAAAAAAAAAAAAIK84wEAAAAAo2jyvbp90NNp9uHEhejFDRs8j08%3DOjJpy10R1wOJulqQFNDJhAnhgq61gialAfLBvVCLRmx0oFG7XW'
-API_KEY = 'lfKHhVucFyjmNYI3QtZ0GPAC9'
-API_SECRET = 'NaLf1V2szj7JGwpeKmCxEM88g10NcgKiUBrJUlqa0s7PqJGp1c'
-ACCESS_TOKEN = '1980354586398371841-Df0aMV1RVILvnQdkAt97Bx33Jcat7u'
-ACCESS_SECRET = 'byKLJwEXo5908wCataZw0EDVmu0nPJVVkitBH3Q3cgawj'
+# Twitter API credentials (set in .env file)
+required_env_vars = ['BEARER_TOKEN', 'API_KEY', 'API_SECRET', 'ACCESS_TOKEN', 'ACCESS_SECRET', 'GROQ_API_KEY']
+for var in required_env_vars:
+    if not os.environ.get(var):
+        logging.error(f"{var} not found in environment variables. Please set it in .env file.")
+        exit(1)
 
-# Groq API key (replace with your actual key)
-GROQ_API_KEY = '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'
+BEARER_TOKEN = os.environ.get('BEARER_TOKEN')
+API_KEY = os.environ.get('API_KEY')
+API_SECRET = os.environ.get('API_SECRET')
+ACCESS_TOKEN = os.environ.get('ACCESS_TOKEN')
+ACCESS_SECRET = os.environ.get('ACCESS_SECRET')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
 # Aura API base URL
 AURA_BASE_URL = 'https://aura.adex.network/api/portfolio'
@@ -38,14 +46,15 @@ client = tweepy.Client(
     wait_on_rate_limit=True  # Automatically wait on rate limits
 )
 
+# Set up Groq client
+if not GROQ_API_KEY:
+    logging.error("GROQ_API_KEY not found in environment variables. Please set it.")
+    exit(1)
+groq_client = Groq(api_key=GROQ_API_KEY)
+
 # Function to generate AI reply using Groq
-def generate_ai_reply(balances, strategies):
-    system_prompt = (
-        "You are TeckAI, an AI that formats portfolio data in a concise, presentable way. "
-        "Responses must be under 50 words. Always start with 'This is an automated response.' "
-        "End with 'Powered by @AdEx_Network 🤝 @teck_degen'. "
-        "Include key portfolio info from balances and strategies."
-    )
+def generate_ai_reply(balances, strategies, tweet_text):
+    is_advice_question = any(keyword in tweet_text.lower() for keyword in ['increase', 'what can i do', 'advice', 'improve', 'grow', 'how to'])
     
     user_prompt = f"Format this data presentably: Balances: {balances}, Strategies: {strategies}"
     
